@@ -1,0 +1,6 @@
+- id: check-ansible-vault-encryption
+  name: Check Ansible Vault Encryption
+  description: Checks if files with "vault" in the name are encrypted.
+  entry: ./check_ansible_vault_encryption.sh
+  language: script
+  files: .*vault.*
