@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: '.'
+          severity: warning
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Display bash version
+        run: bash --version
+
+      - name: Make test script executable
+        run: chmod +x tests/run_tests.sh
+
+      - name: Run test suite
+        run: ./tests/run_tests.sh
+
+  pre-commit:
+    name: Pre-commit Hooks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install pre-commit
+        run: pip install pre-commit
+
+      - name: Create sample pre-commit config
+        run: |
+          cat > .pre-commit-config.yaml << 'EOF'
+          repos:
+            - repo: local
+              hooks:
+                - id: check-ansible-vault-encryption
+                  name: Check Ansible Vault Encryption
+                  entry: ./check_ansible_vault_encryption.sh
+                  language: script
+                  files: .*vault.*
+          EOF
+
+      - name: Install pre-commit hooks
+        run: pre-commit install
+
+      - name: Create test vault file
+        run: |
+          cat > vault_test.yml << 'EOF'
+          $ANSIBLE_VAULT;1.1;AES256
+          66386439653765343264623132353534623566303535646461393437346136306561623762636566
+          3835626533653363356564336162656335623435336262640a653034313335623062666233333437
+          6663663565346437383535323734623461656230303763390a663238346636623639343034663463
+          3531
+          EOF
+
+      - name: Test pre-commit hook
+        run: |
+          git config user.email "test@example.com"
+          git config user.name "Test User"
+          git add vault_test.yml
+          pre-commit run --files vault_test.yml
+
+  markdown-lint:
+    name: Markdown Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Markdown Lint
+        uses: actionshub/markdownlint@main
+        continue-on-error: true
